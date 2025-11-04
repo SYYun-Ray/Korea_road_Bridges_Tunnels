@@ -1,0 +1,39 @@
+version: 2
+output_basename: tunnels
+id_prefix: TUN
+columns:
+- source: 도로종류
+  as: 도로종류
+- source: 노선명
+  as: 노선명
+- source: 시설명
+  as: 시설명
+- source: 시도
+  as: 시도
+- source: 시군구
+  as: 시군구
+- source: 읍면동
+  as: 읍면동
+- source: 리
+  as: 리
+- source: 총길이
+  as: 총길이
+- source: 총폭
+  as: 총폭
+- source: 유효폭
+  as: 유효폭
+- source: 높이
+  as: 높이
+- source: 공수
+  as: 공수
+- source: 교통량
+  as: 교통량
+- source: 기관구분1
+  as: 기관구분1
+- source: 기관구분2
+  as: 기관구분2
+- source: 기관구분3
+  as: 기관구분3
+- source: 준공년도
+  as: 준공년도
+
