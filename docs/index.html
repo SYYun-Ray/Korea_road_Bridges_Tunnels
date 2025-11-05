@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>대한민국 도로 인프라 현황</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --bg: #f4f6fa;
+      --surface: #ffffff;
+      --primary: #0f6bd6;
+      --text: #0f172a;
+      --muted: #64748b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 2.5rem clamp(1rem, 4vw, 3rem) 1.5rem;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 0.75rem;
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    main {
+      flex: 1;
+      padding: 0 clamp(1rem, 4vw, 3rem) 3rem;
+      display: grid;
+      place-items: center;
+    }
+
+    .grid {
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      width: 100%;
+      max-width: 880px;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: 24px;
+      padding: 2rem;
+      box-shadow: 0 18px 36px -24px rgba(15, 23, 42, 0.45);
+      display: grid;
+      gap: 1rem;
+      text-align: left;
+    }
+
+    .card h2 {
+      margin: 0;
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    .card a {
+      justify-self: start;
+      padding: 0.65rem 1.4rem;
+      border-radius: 999px;
+      background: var(--primary);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .card a:hover {
+      background: #0d58b3;
+      transform: translateY(-1px);
+    }
+
+    footer {
+      padding: 2rem;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>대한민국 도로 인프라 현황</h1>
+    <p>교량과 터널 데이터를 각각의 대시보드에서 확인하세요.</p>
+  </header>
+  <main>
+    <div class="grid">
+      <section class="card">
+        <h2>교량 데이터</h2>
+        <p>도로 종류별 교량 현황, 공용년수 분포 등 교량 데이터를 제공합니다.</p>
+        <a href="bridges.html">교량 페이지 열기</a>
+      </section>
+      <section class="card">
+        <h2>터널 데이터</h2>
+        <p>터널의 개소와 연장, 공용년수 비중을 한눈에 확인할 수 있습니다.</p>
+        <a href="tunnels.html">터널 페이지 열기</a>
+      </section>
+      <section class="card">
+        <h2>지하차도 데이터</h2>
+        <p>지하차도 개소와 연장, 도로종류 및 공용년수별 현황을 살펴보세요.</p>
+        <a href="underpasses.html">지하차도 페이지 열기</a>
+      </section>
+    </div>
+  </main>
+  <footer>자료 기준: 2024년 말 조사 (2025년 제공)</footer>
+</body>
+</html>

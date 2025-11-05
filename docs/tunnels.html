@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>대한민국 도로 터널 현황</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --bg: #f4f6fa;
+      --surface: #ffffff;
+      --primary: #0f6bd6;
+      --accent: #f58220;
+      --text: #0f172a;
+      --muted: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+      padding: 1.25rem clamp(1rem, 4vw, 2.5rem);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 3vw, 2.5rem);
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    nav {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    nav a {
+      padding: 0.55rem 1.2rem;
+      border-radius: 999px;
+      text-decoration: none;
+      background: rgba(15, 107, 214, 0.1);
+      color: var(--primary);
+      font-weight: 600;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    nav a.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    nav a:hover {
+      background: rgba(15, 107, 214, 0.2);
+      transform: translateY(-1px);
+    }
+
+    main {
+      padding: 2rem clamp(1rem, 4vw, 2.5rem) 3rem;
+      display: grid;
+      gap: 1.75rem;
+    }
+
+    .loading,
+    .error {
+      border-radius: 14px;
+      padding: 1.5rem;
+      background: rgba(15, 107, 214, 0.08);
+      color: var(--primary);
+      font-weight: 500;
+      text-align: center;
+    }
+
+    .error {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) minmax(280px, 1fr);
+      gap: 1.75rem;
+    }
+
+    @media (max-width: 1100px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    #tunnel-overview {
+      display: grid;
+      gap: 1.75rem;
+    }
+
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .summary-card {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 1.75rem;
+      box-shadow: 0 18px 36px -24px rgba(15, 23, 42, 0.45);
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .summary-card.count {
+      border-top: 6px solid var(--primary);
+    }
+
+    .summary-card.length {
+      border-top: 6px solid var(--accent);
+    }
+
+    .summary-card span.label {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+
+    .summary-card span.value {
+      font-size: clamp(1.9rem, 3.2vw, 2.4rem);
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .summary-card.length span.value {
+      color: var(--accent);
+    }
+
+    .chart-card {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 1.75rem;
+      box-shadow: 0 18px 36px -24px rgba(15, 23, 42, 0.45);
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .chart-card header {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .chart-card h2 {
+      margin: 0;
+      font-size: clamp(1.35rem, 2.5vw, 1.65rem);
+      font-weight: 700;
+    }
+
+    .chart-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .chart-shell {
+      position: relative;
+      min-height: 360px;
+    }
+
+    .roadtype-chart {
+      display: grid;
+      gap: 1.2rem;
+    }
+
+    .chart-row {
+      display: grid;
+      grid-template-columns: minmax(120px, 160px) 1fr;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .chart-row__label {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .chart-row__bars {
+      display: grid;
+      gap: 0.6rem;
+    }
+
+    .chart-bar {
+      position: relative;
+      height: 38px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      padding-inline: 0.9rem;
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: width 0.3s ease;
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    }
+
+    .chart-bar.count {
+      background: linear-gradient(90deg, rgba(15, 107, 214, 0.9), rgba(29, 137, 255, 0.9));
+    }
+
+    .chart-bar.length {
+      background: linear-gradient(90deg, rgba(245, 130, 32, 0.9), rgba(255, 168, 65, 0.95));
+    }
+
+    .chart-bar::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.08);
+      pointer-events: none;
+    }
+
+    .chart-bar span {
+      position: relative;
+      z-index: 1;
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .legend-swatch {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+    }
+
+    .legend-count .legend-swatch {
+      background: rgba(15, 107, 214, 0.82);
+    }
+
+    .legend-length .legend-swatch {
+      background: rgba(245, 130, 32, 0.85);
+    }
+
+    .age-card {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 1.75rem;
+      box-shadow: 0 18px 36px -24px rgba(15, 23, 42, 0.45);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 1.25rem;
+      min-height: 360px;
+    }
+
+    .age-card h2 {
+      margin: 0;
+      font-size: clamp(1.35rem, 2.5vw, 1.65rem);
+      font-weight: 700;
+    }
+
+    .age-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .age-chart-grid {
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+
+    .doughnut-card {
+      display: grid;
+      gap: 1rem;
+      justify-items: center;
+    }
+
+    .doughnut-card h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .doughnut-wrapper {
+      position: relative;
+      width: min(224px, 100%);
+      aspect-ratio: 1 / 1;
+      overflow: visible;
+    }
+
+    .doughnut-text {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      text-align: center;
+      pointer-events: none;
+      padding: 0.4rem;
+    }
+
+    .age-bucket-list {
+      list-style: none;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.45rem;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      align-items: center;
+    }
+
+    .age-bucket-list li {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.88rem;
+      color: var(--text);
+      background: rgba(15, 23, 42, 0.04);
+      border-radius: 999px;
+      padding: 0.4rem 0.75rem;
+    }
+
+    .age-bucket-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .age-bucket-value {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    footer {
+      padding: 2rem clamp(1rem, 4vw, 2.5rem);
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (max-width: 768px) {
+      .chart-shell {
+        min-height: 280px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>대한민국 도로 터널 현황</h1>
+    <nav>
+      <a href="bridges.html">교량 데이터</a>
+      <a href="tunnels.html" class="active">터널 데이터</a>
+      <a href="underpasses.html">지하차도 데이터</a>
+      <a href="index.html">홈</a>
+    </nav>
+  </header>
+  <main>
+    <div class="loading" id="tunnel-loading">터널 데이터를 불러오는 중입니다...</div>
+
+    <section id="tunnel-dashboard" class="dashboard-grid" hidden>
+      <section id="tunnel-overview">
+        <div class="summary-cards" aria-live="polite">
+          <article class="summary-card count" aria-labelledby="tunnel-count-heading">
+            <span class="label" id="tunnel-count-heading">총 개소</span>
+            <span class="value" id="total-tunnel-count">0개소</span>
+          </article>
+          <article class="summary-card length" aria-labelledby="tunnel-length-heading">
+            <span class="label" id="tunnel-length-heading">총 연장</span>
+            <span class="value" id="total-tunnel-length">0km</span>
+          </article>
+        </div>
+
+        <article class="chart-card" aria-labelledby="tunnel-roadtype-heading">
+          <header>
+            <h2 id="tunnel-roadtype-heading">도로종류별 터널 현황</h2>
+            <p>도로 종류별 터널 개수와 연장(km)을 비교했습니다.</p>
+          </header>
+          <div class="chart-shell">
+            <div id="tunnel-roadtype-chart" class="roadtype-chart" role="list" aria-live="polite"></div>
+          </div>
+          <div class="chart-legend">
+            <span class="legend-item legend-count"><span class="legend-swatch"></span>개소</span>
+            <span class="legend-item legend-length"><span class="legend-swatch"></span>연장 (km)</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="age-card" aria-labelledby="tunnel-age-heading">
+        <div>
+          <h2 id="tunnel-age-heading">공용년수별 터널 현황</h2>
+          <p>준공년도 기준 5개 구간으로 구분한 터널 개소 비중입니다.</p>
+        </div>
+        <div class="age-chart-grid" id="tunnel-age-chart-grid" aria-live="polite"></div>
+        <ul class="age-bucket-list" id="tunnel-age-legend"></ul>
+      </section>
+    </section>
+  </main>
+  <footer>
+    자료 기준: 2024년 말 조사 (2025년 제공)
+  </footer>
+
+  <script type="module" src="./js/tunnels.js"></script>
+</body>
+</html>
