@@ -8,9 +8,29 @@ const totalLengthEl = document.getElementById('total-tunnel-length');
 const roadTypeChartContainer = document.getElementById('tunnel-roadtype-chart');
 const ageChartGrid = document.getElementById('tunnel-age-chart-grid');
 const ageLegendList = document.getElementById('tunnel-age-legend');
+const bucketCountsContainer = document.getElementById('tunnel-bucket-counts');
+const bucketLengthsContainer = document.getElementById('tunnel-bucket-lengths');
+const bucketLegendContainer = document.getElementById('tunnel-bucket-legend');
+const filterSearch = document.getElementById('filter-search');
+const filterRoadType = document.getElementById('filter-roadtype');
+const filterRegion = document.getElementById('filter-region');
+const filterYearMin = document.getElementById('filter-year-min');
+const filterYearMax = document.getElementById('filter-year-max');
+const filterLengthMin = document.getElementById('filter-length-min');
+const filterLengthMax = document.getElementById('filter-length-max');
+const filterWidthMin = document.getElementById('filter-width-min');
+const filterWidthMax = document.getElementById('filter-width-max');
+const filterApplyBtn = document.getElementById('filter-apply');
+const filterResetBtn = document.getElementById('filter-reset');
+const tableSummary = document.getElementById('tunnel-table-summary');
+const tableBody = document.getElementById('tunnel-table-body');
+const pagePrevBtn = document.getElementById('page-prev');
+const pageNextBtn = document.getElementById('page-next');
+const pageInfo = document.getElementById('page-info');
 
 const countFormatter = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 });
 const lengthFormatter = new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const widthFormatter = new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
 const percentFormatter = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 1 });
 
 const AGE_BUCKETS = [
@@ -33,6 +53,27 @@ const AGE_ROAD_TYPES = [
   '\uad6c\ub3c4',
 ];
 const ROAD_TYPE_WHITELIST = AGE_ROAD_TYPES.filter(type => type !== '\uc804\uccb4');
+const BUCKETS = [
+  { key: 'under_500', label: '500m 미만', min: 0, max: 500 },
+  { key: '500_1000', label: '500~1,000m', min: 500, max: 1000 },
+  { key: '1000_3000', label: '1,000~3,000m', min: 1000, max: 3000 },
+  { key: '3000_plus', label: '3,000m 이상', min: 3000, max: Infinity },
+];
+
+const ROAD_COLORS = {
+  '\uace0\uc18d\uad6d\ub3c4': '#0f6bd6',
+  '\uc77c\ubc18\uad6d\ub3c4': '#f97316',
+  '\ud2b9\ubcc4,\uad11\uc5ed\uc2dc\ub3c4': '#a855f7',
+  '\uc9c0\ubc29\ub3c4': '#22c55e',
+  '\uad6d\uac00\uc9c0\uc6d0\uc9c0\ubc29\ub3c4': '#0ea5e9',
+  '\uc2dc\ub3c4': '#6366f1',
+  '\uad70\ub3c4': '#ec4899',
+  '\uad6c\ub3c4': '#14b8a6',
+};
+const TABLE_PAGE_SIZE = 200;
+let tunnelDataset = [];
+let filteredDataset = [];
+let currentPage = 1;
 
 document.addEventListener('DOMContentLoaded', () => {
   loadTunnelData();
@@ -41,14 +82,17 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadTunnelData() {
   try {
     const response = await fetch(TUNNELS_URL);
-    if (!response.ok) throw new Error('\ub370\uc774\ud130\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.');
+    if (!response.ok) throw new Error(`데이터를 불러오지 못했습니다. (HTTP ${response.status})`);
 
     const tunnels = await response.json();
     const summary = summarizeTunnels(tunnels);
     renderTunnelOverview(summary);
     renderAgeBreakdown(summary.ageGroups);
+    renderBucketStacks(summary.bucketSummary);
+    prepareTableDataset(tunnels);
   } catch (error) {
-    showError(error.message || '\uc54c \uc218 \uc5c6\ub294 \uc624\ub958\uac00 \ubc1c\uc0dd\ud588\uc2b5\ub2c8\ub2e4.');
+    showError(error.message || '알 수 없는 오류가 발생했습니다.');
+    renderTableError(error.message || '데이터를 불러오지 못했습니다.');
     console.error(error);
   }
 }
@@ -56,6 +100,7 @@ async function loadTunnelData() {
 function summarizeTunnels(tunnels) {
   let totalLength = 0;
   const aggregates = new Map();
+  const bucketSummary = initBucketSummary();
   const ageTotals = Object.fromEntries(
     AGE_ROAD_TYPES.map(type => [type, initAgeBucket()]),
   );
@@ -80,6 +125,8 @@ function summarizeTunnels(tunnels) {
     record.length += lengthMeters;
     aggregates.set(rawRoadType, record);
 
+    assignBucket(bucketSummary, lengthMeters, rawRoadType);
+
     const bucket = mapYearToBucket(item['준공년도']);
     if (bucket) {
       ageTotals['전체'][bucket] += 1;
@@ -101,6 +148,7 @@ function summarizeTunnels(tunnels) {
     totalCount: includedCount,
     totalLengthKm: totalLength / 1000,
     byRoadType,
+    bucketSummary,
     ageGroups: ageTotals,
   };
 }
@@ -215,6 +263,120 @@ function renderAgeBreakdown(ageGroups) {
   renderAgeLegend(ageGroups['\uc804\uccb4']);
 }
 
+function renderBucketStacks(bucketSummary) {
+  if (!bucketCountsContainer || !bucketLengthsContainer || !bucketLegendContainer) return;
+
+  renderBucketRows(bucketCountsContainer, bucketSummary, 'count');
+  renderBucketRows(bucketLengthsContainer, bucketSummary, 'length');
+  renderBucketLegend();
+}
+
+function renderBucketRows(container, summary, mode) {
+  container.innerHTML = '';
+  const fragment = document.createDocumentFragment();
+
+  const grandTotal = mode === 'count'
+    ? BUCKETS.reduce((sum, b) => sum + summary.total[b.key].count, 0)
+    : BUCKETS.reduce((sum, b) => sum + summary.total[b.key].length / 1000, 0);
+  const denom = grandTotal > 0 ? grandTotal : 1;
+
+  BUCKETS.forEach(bucket => {
+    const row = document.createElement('div');
+    row.className = 'bucket-row';
+
+    const label = document.createElement('div');
+    label.className = 'bucket-label';
+    label.textContent = bucket.label;
+
+    const bar = document.createElement('div');
+    bar.className = 'bucket-bar';
+
+    const totalValue =
+      mode === 'count'
+        ? summary.total[bucket.key].count
+        : summary.total[bucket.key].length / 1000;
+
+    const segments = summary.byRoad[bucket.key];
+    Object.entries(segments).forEach(([road, stats]) => {
+      const value = mode === 'count' ? stats.count : stats.lengthKm;
+      if (value <= 0) return;
+      const widthPercent = (value / denom) * 100;
+      const segment = document.createElement('div');
+      segment.className = 'bucket-segment';
+      segment.style.width = `${widthPercent}%`;
+      segment.style.background = ROAD_COLORS[road] || '#94a3b8';
+      segment.textContent = mode === 'count' ? countFormatter.format(value) : lengthFormatter.format(value);
+      bar.appendChild(segment);
+    });
+
+    const total = document.createElement('div');
+    total.className = 'bucket-total';
+    total.textContent = mode === 'count'
+      ? countFormatter.format(totalValue)
+      : `${lengthFormatter.format(totalValue)}km`;
+
+    row.append(label, bar, total);
+    fragment.appendChild(row);
+  });
+
+  container.appendChild(fragment);
+}
+
+function renderBucketLegend() {
+  if (!bucketLegendContainer) return;
+  bucketLegendContainer.innerHTML = '';
+  ROAD_TYPE_WHITELIST.forEach(road => {
+    const span = document.createElement('span');
+    span.innerHTML = `<span class="bucket-swatch" style="background:${ROAD_COLORS[road] || '#94a3b8'}"></span>${road}`;
+    bucketLegendContainer.appendChild(span);
+  });
+}
+
+
+function mapYearToBucket(yearString) {
+  if (yearString === undefined || yearString === null) return null;
+  const digits = String(yearString).replace(/[^0-9]/g, '');
+  if (!digits) return null;
+  const year = Number.parseInt(digits, 10);
+  if (!Number.isFinite(year)) return null;
+
+  if (year >= 2015) return '\u0031\u0030\ub144 \ubbf8\ub9cc';
+  if (year >= 2005) return '\u0031\u0030~\u0032\u0030\ub144 \ubbf8\ub9cc';
+  if (year >= 1995) return '\u0032\u0030~\u0033\u0030\ub144 \ubbf8\ub9cc';
+  if (year >= 1975) return '\u0033\u0030~\u0035\u0030\ub144 \ubbf8\ub9cc';
+  return '\u0035\u0030\ub144 \uc774\uc0c1';
+}
+
+function toNumber(value) {
+  if (value === undefined || value === null || value === '') return 0;
+  const normalized = value.toString().replace(/[^0-9.-]/g, '');
+  const parsed = Number.parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function showError(message) {
+  if (loadingIndicator) {
+    loadingIndicator.classList.remove('loading');
+    loadingIndicator.classList.add('error');
+    loadingIndicator.textContent = message;
+  }
+}
+
+function renderAgeLegend(referenceBuckets) {
+  if (!ageLegendList) return;
+
+  ageLegendList.innerHTML = '';
+
+  AGE_BUCKETS.forEach(bucket => {
+    const item = document.createElement('li');
+    item.innerHTML = `
+      <span class="age-bucket-swatch" style="background:${bucket.color}"></span>
+      <span class="age-bucket-label">${bucket.label}</span>
+    `;
+    ageLegendList.appendChild(item);
+  });
+}
+
 function drawDonut(canvas, buckets, total) {
   const size = 224;
   canvas.width = size;
@@ -289,7 +451,6 @@ function drawDonut(canvas, buckets, total) {
     ctx.textBaseline = 'middle';
     ctx.fillText(`${percentText}%`, x, y);
   });
-
 }
 
 function initAgeBucket() {
@@ -299,47 +460,190 @@ function initAgeBucket() {
   }, {});
 }
 
-function mapYearToBucket(yearString) {
-  if (yearString === undefined || yearString === null) return null;
-  const digits = String(yearString).replace(/[^0-9]/g, '');
-  if (!digits) return null;
-  const year = Number.parseInt(digits, 10);
-  if (!Number.isFinite(year)) return null;
+function initBucketSummary() {
+  const byRoad = {};
+  BUCKETS.forEach(bucket => {
+    byRoad[bucket.key] = {};
+    ROAD_TYPE_WHITELIST.forEach(road => {
+      byRoad[bucket.key][road] = { count: 0, lengthKm: 0 };
+    });
+  });
 
-  if (year >= 2015) return '\u0031\u0030\ub144 \ubbf8\ub9cc';
-  if (year >= 2005) return '\u0031\u0030~\u0032\u0030\ub144 \ubbf8\ub9cc';
-  if (year >= 1995) return '\u0032\u0030~\u0033\u0030\ub144 \ubbf8\ub9cc';
-  if (year >= 1975) return '\u0033\u0030~\u0035\u0030\ub144 \ubbf8\ub9cc';
-  return '\u0035\u0030\ub144 \uc774\uc0c1';
+  const total = {};
+  BUCKETS.forEach(bucket => {
+    total[bucket.key] = { count: 0, length: 0 };
+  });
+
+  return {
+    byRoad,
+    total,
+    maxTotals: { count: 0, length: 0 },
+  };
 }
 
-function toNumber(value) {
-  if (value === undefined || value === null || value === '') return 0;
-  const normalized = value.toString().replace(/[^0-9.-]/g, '');
-  const parsed = Number.parseFloat(normalized);
-  return Number.isFinite(parsed) ? parsed : 0;
+function assignBucket(summary, lengthMeters, roadType) {
+  const bucket = BUCKETS.find(b => lengthMeters >= b.min && lengthMeters < b.max);
+  if (!bucket) return;
+  const bucketKey = bucket.key;
+  const bucketRoad = summary.byRoad[bucketKey]?.[roadType];
+  if (bucketRoad) {
+    bucketRoad.count += 1;
+    bucketRoad.lengthKm += lengthMeters / 1000;
+  }
+  summary.total[bucketKey].count += 1;
+  summary.total[bucketKey].length += lengthMeters;
+  summary.maxTotals.count = Math.max(summary.maxTotals.count, summary.total[bucketKey].count);
+  summary.maxTotals.length = Math.max(summary.maxTotals.length, summary.total[bucketKey].length / 1000);
 }
 
-function showError(message) {
-  if (loadingIndicator) {
-    loadingIndicator.classList.remove('loading');
-    loadingIndicator.classList.add('error');
-    loadingIndicator.textContent = message;
+function prepareTableDataset(tunnels) {
+  tunnelDataset = tunnels.map(item => {
+    const roadType = (item['\ub3c4\ub85c\uc885\ub958'] ?? '\uae30\ud0c0').toString().trim() || '\uae30\ud0c0';
+    const region = (item['\uc2dc\ub3c4'] ?? '').toString().trim() || '-';
+    const rawLength = item['총길이'] ?? item['총연장'] ?? item['연장(m)'] ?? item['연장(km)'];
+    let lengthMeters = toNumber(rawLength);
+    if (item['연장(km)'] !== undefined && item['연장(m)'] === undefined && item['총길이'] === undefined && item['총연장'] === undefined) {
+      lengthMeters *= 1000;
+    }
+    const widthMeters = toNumber(item['총폭'] ?? item['유효폭']);
+    const yearDigits = String(item['준공년도'] ?? '').replace(/[^0-9]/g, '');
+    const year = yearDigits ? Number.parseInt(yearDigits, 10) : null;
+
+    return {
+      facility: (item['시설명'] ?? '').toString().trim() || '(무제)',
+      roadType,
+      region,
+      lengthKm: lengthMeters / 1000,
+      width: widthMeters,
+      year,
+    };
+  });
+
+  populateFilterOptions();
+  bindFilterEvents();
+  applyFilters();
+}
+
+function populateFilterOptions() {
+  const addOptions = (select, values, labelAll) => {
+    select.innerHTML = '';
+    const optAll = document.createElement('option');
+    optAll.value = 'ALL';
+    optAll.textContent = labelAll;
+    select.appendChild(optAll);
+    values.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = v;
+      select.appendChild(opt);
+    });
+  };
+
+  const roadTypes = Array.from(new Set(tunnelDataset.map(d => d.roadType))).sort();
+  const regions = Array.from(new Set(tunnelDataset.map(d => d.region))).filter(v => v && v !== '-').sort();
+
+  addOptions(filterRoadType, roadTypes, '전체');
+  addOptions(filterRegion, regions, '전체');
+}
+
+function bindFilterEvents() {
+  filterApplyBtn?.addEventListener('click', () => {
+    currentPage = 1;
+    applyFilters();
+  });
+
+  filterResetBtn?.addEventListener('click', () => {
+    if (filterSearch) filterSearch.value = '';
+    [filterRoadType, filterRegion].forEach(sel => { if (sel) sel.value = 'ALL'; });
+    [filterYearMin, filterYearMax, filterLengthMin, filterLengthMax, filterWidthMin, filterWidthMax].forEach(inp => { if (inp) inp.value = ''; });
+    currentPage = 1;
+    applyFilters();
+  });
+
+  pagePrevBtn?.addEventListener('click', () => {
+    if (currentPage > 1) {
+      currentPage -= 1;
+      renderTable();
+    }
+  });
+
+  pageNextBtn?.addEventListener('click', () => {
+    const maxPage = Math.ceil(filteredDataset.length / TABLE_PAGE_SIZE) || 1;
+    if (currentPage < maxPage) {
+      currentPage += 1;
+      renderTable();
+    }
+  });
+}
+
+function applyFilters() {
+  const search = filterSearch?.value.trim().toLowerCase() || '';
+  const roadSel = filterRoadType?.value || 'ALL';
+  const regionSel = filterRegion?.value || 'ALL';
+  const yearMin = filterYearMin?.value ? Number(filterYearMin.value) : null;
+  const yearMax = filterYearMax?.value ? Number(filterYearMax.value) : null;
+  const lenMin = filterLengthMin?.value ? Number(filterLengthMin.value) : null;
+  const lenMax = filterLengthMax?.value ? Number(filterLengthMax.value) : null;
+  const widthMin = filterWidthMin?.value ? Number(filterWidthMin.value) : null;
+  const widthMax = filterWidthMax?.value ? Number(filterWidthMax.value) : null;
+
+  filteredDataset = tunnelDataset.filter(row => {
+    if (search && !row.facility.toLowerCase().includes(search)) return false;
+    if (roadSel !== 'ALL' && row.roadType !== roadSel) return false;
+    if (regionSel !== 'ALL' && row.region !== regionSel) return false;
+    if (yearMin !== null && (row.year === null || row.year < yearMin)) return false;
+    if (yearMax !== null && (row.year === null || row.year > yearMax)) return false;
+    if (lenMin !== null && row.lengthKm < lenMin) return false;
+    if (lenMax !== null && row.lengthKm > lenMax) return false;
+    if (widthMin !== null && row.width < widthMin) return false;
+    if (widthMax !== null && row.width > widthMax) return false;
+    return true;
+  });
+
+  renderTableSummary();
+  renderTable();
+}
+
+function renderTableSummary() {
+  if (!tableSummary) return;
+  const totalCount = filteredDataset.length;
+  const totalLength = filteredDataset.reduce((sum, r) => sum + r.lengthKm, 0);
+  tableSummary.textContent = `결과: ${countFormatter.format(totalCount)}개소 · 총연장 ${lengthFormatter.format(totalLength)}km`;
+}
+
+function renderTable() {
+  if (!tableBody) return;
+  tableBody.innerHTML = '';
+  const maxPage = Math.ceil(filteredDataset.length / TABLE_PAGE_SIZE) || 1;
+  if (currentPage > maxPage) currentPage = maxPage;
+  const start = (currentPage - 1) * TABLE_PAGE_SIZE;
+  const slice = filteredDataset.slice(start, start + TABLE_PAGE_SIZE);
+
+  slice.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${row.facility}</td>
+      <td>${row.roadType}</td>
+      <td>${row.region}</td>
+      <td>${lengthFormatter.format(row.lengthKm)}</td>
+      <td>${row.width ? widthFormatter.format(row.width) : '-'}</td>
+      <td>${row.year ?? '-'}</td>
+    `;
+    tableBody.appendChild(tr);
+  });
+
+  if (pageInfo) {
+    pageInfo.textContent = `${currentPage} / ${maxPage}`;
   }
 }
 
-function renderAgeLegend(referenceBuckets) {
-  if (!ageLegendList) return;
-
-  ageLegendList.innerHTML = '';
-  const total = Object.values(referenceBuckets).reduce((sum, value) => sum + value, 0);
-
-  AGE_BUCKETS.forEach(bucket => {
-    const item = document.createElement('li');
-    item.innerHTML = `
-      <span class="age-bucket-swatch" style="background:${bucket.color}"></span>
-      <span class="age-bucket-label">${bucket.label}</span>
-    `;
-    ageLegendList.appendChild(item);
-  });
+function renderTableError(message) {
+  if (!tableBody || !tableSummary) return;
+  tableBody.innerHTML = `
+    <tr>
+      <td colspan="6">${message}</td>
+    </tr>
+  `;
+  tableSummary.textContent = '데이터가 없어 표를 표시할 수 없습니다.';
+  if (pageInfo) pageInfo.textContent = '';
 }

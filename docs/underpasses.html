@@ -347,6 +347,212 @@
       color: var(--primary);
     }
 
+    .bucket-card,
+    .data-card {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 1.75rem;
+      box-shadow: 0 18px 36px -24px rgba(15, 23, 42, 0.45);
+      display: grid;
+      gap: 1.25rem;
+    }
+
+    .bucket-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 80px;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .bucket-label {
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .bucket-bar {
+      position: relative;
+      height: 38px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+      display: flex;
+      align-items: stretch;
+    }
+
+    .bucket-segment {
+      height: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.9rem;
+      min-width: 26px;
+    }
+
+    .bucket-total {
+      font-weight: 800;
+      color: var(--primary);
+      text-align: right;
+      font-size: 1.05rem;
+    }
+
+    .bucket-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem 1rem;
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+
+    .bucket-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 600;
+    }
+
+    .bucket-swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .data-filters {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      align-items: end;
+    }
+
+    .filter-field {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .filter-field label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .filter-field input,
+    .filter-field select {
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      border-radius: 10px;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.95rem;
+      font-family: inherit;
+      background: #fff;
+    }
+
+    .filter-row {
+      display: grid;
+      gap: 0.55rem;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      align-items: center;
+    }
+
+    .filter-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 10px;
+      padding: 0.6rem 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-ghost {
+      background: rgba(15, 23, 42, 0.05);
+      color: var(--text);
+    }
+
+    .table-wrapper {
+      width: 100%;
+      overflow: auto;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 16px;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+
+    table.data-table thead {
+      background: rgba(15, 107, 214, 0.06);
+    }
+
+    table.data-table th,
+    table.data-table td {
+      padding: 0.65rem 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+      font-size: 0.92rem;
+    }
+
+    table.data-table th {
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    table.data-table tbody tr:nth-child(odd) {
+      background: rgba(15, 23, 42, 0.02);
+    }
+
+    table.data-table tbody tr:hover {
+      background: rgba(15, 107, 214, 0.08);
+    }
+
+    .data-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-top: 0.25rem;
+    }
+
+    .pagination {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .pagination button {
+      border: 1px solid rgba(15, 23, 42, 0.15);
+      background: #fff;
+      padding: 0.45rem 0.75rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .pagination .page-info {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    #underpass-table-card {
+      grid-column: 1 / -1;
+    }
+
     footer {
       padding: 2rem clamp(1rem, 4vw, 2.5rem);
       font-size: 0.85rem;
@@ -390,7 +596,7 @@
         <article class="chart-card" aria-labelledby="underpass-roadtype-heading">
           <header>
             <h2 id="underpass-roadtype-heading">도로종류별 지하차도 현황</h2>
-            <p>도로 종류별 지하차도 개수와 연장(km)을 비교했습니다.</p>
+            <p>도로 종류별 지하차도의 개소 수와 총 연장(km)을 비교합니다.</p>
           </header>
           <div class="chart-shell">
             <div id="underpass-roadtype-chart" class="roadtype-chart" role="list" aria-live="polite"></div>
@@ -405,10 +611,93 @@
       <section class="age-card" aria-labelledby="underpass-age-heading">
         <div>
           <h2 id="underpass-age-heading">공용년수별 지하차도 현황</h2>
-          <p>준공년도 기준 5개 구간으로 구분한 지하차도 개소 비중입니다.</p>
+          <p>준공년도 기준 5개 구간으로 구분해 지하차도 개소 비중을 확인합니다.</p>
         </div>
         <div class="age-chart-grid" id="underpass-age-chart-grid" aria-live="polite"></div>
         <ul class="age-bucket-list" id="underpass-age-legend"></ul>
+      </section>
+
+      <section class="bucket-card" aria-labelledby="underpass-bucket-heading">
+        <div>
+          <h2 id="underpass-bucket-heading">지하차도 총괄 (길이 구간별)</h2>
+          <p>길이 구간별로 도로종류 스택을 보여주며, 개소와 연장을 한눈에 비교합니다.</p>
+        </div>
+        <div>
+          <h3 class="bucket-label">총 개소</h3>
+          <div id="underpass-bucket-counts" aria-live="polite"></div>
+        </div>
+        <div>
+          <h3 class="bucket-label">총 연장</h3>
+          <div id="underpass-bucket-lengths" aria-live="polite"></div>
+        </div>
+        <div class="bucket-legend" id="underpass-bucket-legend"></div>
+      </section>
+
+      <section class="data-card" id="underpass-table-card" aria-labelledby="underpass-table-heading">
+        <div>
+          <h2 id="underpass-table-heading">원본 데이터 조회</h2>
+          <p>필터와 검색으로 지하차도 데이터를 탐색하고, 페이지 단위로 확인하세요.</p>
+        </div>
+        <div class="data-filters" id="underpass-filters">
+          <div class="filter-field">
+            <label for="underpass-filter-search">시설명 검색</label>
+            <input type="search" id="underpass-filter-search" placeholder="예: 청계천 지하차도">
+          </div>
+          <div class="filter-field">
+            <label for="underpass-filter-roadtype">도로종류</label>
+            <select id="underpass-filter-roadtype"></select>
+          </div>
+          <div class="filter-field">
+            <label for="underpass-filter-region">시도</label>
+            <select id="underpass-filter-region"></select>
+          </div>
+          <div class="filter-field">
+            <label>준공년도 범위</label>
+            <div class="filter-row">
+              <input type="number" id="underpass-filter-year-min" placeholder="최소">
+              <input type="number" id="underpass-filter-year-max" placeholder="최대">
+            </div>
+          </div>
+          <div class="filter-field">
+            <label>총연장 (km)</label>
+            <div class="filter-row">
+              <input type="number" id="underpass-filter-length-min" placeholder="최소" step="0.1">
+              <input type="number" id="underpass-filter-length-max" placeholder="최대" step="0.1">
+            </div>
+          </div>
+          <div class="filter-field">
+            <label>총폭 (m)</label>
+            <div class="filter-row">
+              <input type="number" id="underpass-filter-width-min" placeholder="최소" step="0.1">
+              <input type="number" id="underpass-filter-width-max" placeholder="최대" step="0.1">
+            </div>
+          </div>
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-primary" id="underpass-filter-apply">필터 적용</button>
+          <button class="btn btn-ghost" id="underpass-filter-reset">필터 초기화</button>
+        </div>
+        <div class="data-summary" id="underpass-table-summary" aria-live="polite"></div>
+        <div class="table-wrapper">
+          <table class="data-table" aria-live="polite">
+            <thead>
+              <tr>
+                <th scope="col">시설명</th>
+                <th scope="col">도로종류</th>
+                <th scope="col">시도</th>
+                <th scope="col">총연장 (km)</th>
+                <th scope="col">총폭 (m)</th>
+                <th scope="col">준공년도</th>
+              </tr>
+            </thead>
+            <tbody id="underpass-table-body"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <button id="underpass-page-prev">이전</button>
+          <span class="page-info" id="underpass-page-info"></span>
+          <button id="underpass-page-next">다음</button>
+        </div>
       </section>
     </section>
   </main>
@@ -419,4 +708,3 @@
   <script type="module" src="./js/underpasses.js"></script>
 </body>
 </html>
-
