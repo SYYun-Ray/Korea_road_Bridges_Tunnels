@@ -13,6 +13,23 @@ const specialBarSvg = document.getElementById('bridge-special-barline');
 const specialSpanList = document.getElementById('bridge-special-span-list');
 const ageChartGrid = document.getElementById('bridge-age-chart-grid');
 const ageLegendList = document.getElementById('bridge-age-legend');
+const filterSearch = document.getElementById('filter-search');
+const filterRoadType = document.getElementById('filter-roadtype');
+const filterStructure = document.getElementById('filter-structure');
+const filterRegion = document.getElementById('filter-region');
+const filterYearMin = document.getElementById('filter-year-min');
+const filterYearMax = document.getElementById('filter-year-max');
+const filterLengthMin = document.getElementById('filter-length-min');
+const filterLengthMax = document.getElementById('filter-length-max');
+const filterSpanMin = document.getElementById('filter-span-min');
+const filterSpanMax = document.getElementById('filter-span-max');
+const filterApplyBtn = document.getElementById('filter-apply');
+const filterResetBtn = document.getElementById('filter-reset');
+const tableSummary = document.getElementById('bridge-table-summary');
+const tableBody = document.getElementById('bridge-table-body');
+const pagePrevBtn = document.getElementById('page-prev');
+const pageNextBtn = document.getElementById('page-next');
+const pageInfo = document.getElementById('page-info');
 
 const countFormatter = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 });
 const lengthFormatter = new Intl.NumberFormat('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -55,6 +72,11 @@ const ETC_SUPERSTRUCTURES = new Set([
   'RC\ubc15\uc2a4\uac70\ub354\uad50',
 ]);
 
+const TABLE_PAGE_SIZE = 200;
+let bridgeDataset = [];
+let filteredDataset = [];
+let currentPage = 1;
+
 document.addEventListener('DOMContentLoaded', () => {
   loadBridgeData();
 });
@@ -68,6 +90,7 @@ async function loadBridgeData() {
     const summary = summarizeBridges(bridges);
     renderBridgeOverview(summary);
     renderAgeBreakdown(summary.ageGroups);
+    prepareTableDataset(bridges);
   } catch (error) {
     showError(error.message || '\uc54c \uc218 \uc5c6\ub294 \uc624\ub958\uac00 \ubc1c\uc0dd\ud588\uc2b5\ub2c8\ub2e4.');
     console.error(error);
@@ -467,6 +490,158 @@ function renderSpecialSpanList(items) {
     }
     specialSpanList.appendChild(row);
   });
+}
+
+function prepareTableDataset(bridges) {
+  bridgeDataset = bridges.map(item => {
+    const roadType = (item['\ub3c4\ub85c\uc885\ub958'] ?? '\uae30\ud0c0').toString().trim() || '\uae30\ud0c0';
+    const structureRaw = (item['\uc0c1\ubd80\uad6c\uc870'] ?? '').toString().trim();
+    const structure = mapSuperstructure(structureRaw);
+    const region = (item['\uc2dc\ub3c4'] ?? '').toString().trim() || '-';
+    const lengthMeters = toNumber(item['\ucd1d\uae38\uc774'] ?? item['\ucd1d\uc5f0\uc7a5'] ?? item['\uc5f0\uc7a5(m)']);
+    const span = toNumber(item['\ucd5c\ub300\uacbd\uac04\uc7a5']);
+    const yearDigits = String(item['\uc900\uacf5\ub144\ub3c4'] ?? '').replace(/[^0-9]/g, '');
+    const year = yearDigits ? Number.parseInt(yearDigits, 10) : null;
+
+    return {
+      facility: (item['\uc2dc\uc124\uba85'] ?? '').toString().trim() || '(무제)',
+      roadType,
+      structure,
+      structureRaw,
+      region,
+      lengthKm: lengthMeters / 1000,
+      span,
+      year,
+    };
+  });
+
+  populateFilterOptions();
+  applyFilters();
+  bindFilterEvents();
+}
+
+function populateFilterOptions() {
+  const addOptions = (select, values, labelAll) => {
+    select.innerHTML = '';
+    const optAll = document.createElement('option');
+    optAll.value = 'ALL';
+    optAll.textContent = labelAll;
+    select.appendChild(optAll);
+    values.forEach(value => {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = value;
+      select.appendChild(opt);
+    });
+  };
+
+  const uniqueRoadTypes = Array.from(new Set(bridgeDataset.map(item => item.roadType))).sort();
+  const uniqueStructures = Array.from(new Set(bridgeDataset.map(item => item.structure))).sort();
+  const uniqueRegions = Array.from(new Set(bridgeDataset.map(item => item.region))).filter(v => v && v !== '-').sort();
+
+  addOptions(filterRoadType, uniqueRoadTypes, '전체');
+  addOptions(filterStructure, uniqueStructures, '전체');
+  addOptions(filterRegion, uniqueRegions, '전체');
+}
+
+function bindFilterEvents() {
+  filterApplyBtn?.addEventListener('click', () => {
+    currentPage = 1;
+    applyFilters();
+  });
+
+  filterResetBtn?.addEventListener('click', () => {
+    if (filterSearch) filterSearch.value = '';
+    [filterRoadType, filterStructure, filterRegion].forEach(select => {
+      if (select) select.value = 'ALL';
+    });
+    [filterYearMin, filterYearMax, filterLengthMin, filterLengthMax, filterSpanMin, filterSpanMax].forEach(input => {
+      if (input) input.value = '';
+    });
+    currentPage = 1;
+    applyFilters();
+  });
+
+  pagePrevBtn?.addEventListener('click', () => {
+    if (currentPage > 1) {
+      currentPage -= 1;
+      renderTable();
+    }
+  });
+
+  pageNextBtn?.addEventListener('click', () => {
+    const maxPage = Math.ceil(filteredDataset.length / TABLE_PAGE_SIZE) || 1;
+    if (currentPage < maxPage) {
+      currentPage += 1;
+      renderTable();
+    }
+  });
+}
+
+function applyFilters() {
+  const searchTerm = filterSearch?.value.trim().toLowerCase() || '';
+  const roadTypeSel = filterRoadType?.value || 'ALL';
+  const structureSel = filterStructure?.value || 'ALL';
+  const regionSel = filterRegion?.value || 'ALL';
+  const yearMinVal = filterYearMin?.value ? Number(filterYearMin.value) : null;
+  const yearMaxVal = filterYearMax?.value ? Number(filterYearMax.value) : null;
+  const lenMin = filterLengthMin?.value ? Number(filterLengthMin.value) : null;
+  const lenMax = filterLengthMax?.value ? Number(filterLengthMax.value) : null;
+  const spanMin = filterSpanMin?.value ? Number(filterSpanMin.value) : null;
+  const spanMax = filterSpanMax?.value ? Number(filterSpanMax.value) : null;
+
+  filteredDataset = bridgeDataset.filter(item => {
+    if (searchTerm && !item.facility.toLowerCase().includes(searchTerm)) return false;
+    if (roadTypeSel !== 'ALL' && item.roadType !== roadTypeSel) return false;
+    if (structureSel !== 'ALL' && item.structure !== structureSel) return false;
+    if (regionSel !== 'ALL' && item.region !== regionSel) return false;
+    if (yearMinVal !== null && (item.year === null || item.year < yearMinVal)) return false;
+    if (yearMaxVal !== null && (item.year === null || item.year > yearMaxVal)) return false;
+    if (lenMin !== null && item.lengthKm < lenMin) return false;
+    if (lenMax !== null && item.lengthKm > lenMax) return false;
+    if (spanMin !== null && item.span < spanMin) return false;
+    if (spanMax !== null && item.span > spanMax) return false;
+    return true;
+  });
+
+  renderTableSummary();
+  renderTable();
+}
+
+function renderTableSummary() {
+  if (!tableSummary) return;
+  const totalCount = filteredDataset.length;
+  const totalLength = filteredDataset.reduce((sum, row) => sum + row.lengthKm, 0);
+  tableSummary.textContent = `결과: ${countFormatter.format(totalCount)}개소 · 총연장 ${lengthFormatter.format(totalLength)}km`;
+}
+
+function renderTable() {
+  if (!tableBody) return;
+  tableBody.innerHTML = '';
+
+  const maxPage = Math.ceil(filteredDataset.length / TABLE_PAGE_SIZE) || 1;
+  if (currentPage > maxPage) currentPage = maxPage;
+
+  const start = (currentPage - 1) * TABLE_PAGE_SIZE;
+  const slice = filteredDataset.slice(start, start + TABLE_PAGE_SIZE);
+
+  slice.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${row.facility}</td>
+      <td>${row.roadType}</td>
+      <td>${row.structure}</td>
+      <td>${row.region}</td>
+      <td>${lengthFormatter.format(row.lengthKm)}</td>
+      <td>${row.span ? countFormatter.format(row.span) : '-'}</td>
+      <td>${row.year ?? '-'}</td>
+    `;
+    tableBody.appendChild(tr);
+  });
+
+  if (pageInfo) {
+    pageInfo.textContent = `${currentPage} / ${maxPage}`;
+  }
 }
 
 function renderAgeBreakdown(ageGroups) {
