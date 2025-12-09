@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadBridgeData() {
   try {
     const response = await fetch(BRIDGES_URL);
-    if (!response.ok) throw new Error('\ub370\uc774\ud130\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.');
+    if (!response.ok) throw new Error(`데이터를 불러오지 못했습니다. (HTTP ${response.status})`);
 
     const bridges = await response.json();
     const summary = summarizeBridges(bridges);
@@ -92,7 +92,8 @@ async function loadBridgeData() {
     renderAgeBreakdown(summary.ageGroups);
     prepareTableDataset(bridges);
   } catch (error) {
-    showError(error.message || '\uc54c \uc218 \uc5c6\ub294 \uc624\ub958\uac00 \ubc1c\uc0dd\ud588\uc2b5\ub2c8\ub2e4.');
+    showError(error.message || '알 수 없는 오류가 발생했습니다.');
+    renderTableError(error.message || '데이터를 불러오지 못했습니다.');
     console.error(error);
   }
 }
@@ -518,6 +519,17 @@ function prepareTableDataset(bridges) {
   populateFilterOptions();
   applyFilters();
   bindFilterEvents();
+}
+
+function renderTableError(message) {
+  if (!tableBody || !tableSummary) return;
+  tableBody.innerHTML = `
+    <tr>
+      <td colspan="7">${message}</td>
+    </tr>
+  `;
+  tableSummary.textContent = '데이터가 없어 표를 표시할 수 없습니다.';
+  if (pageInfo) pageInfo.textContent = '';
 }
 
 function populateFilterOptions() {
